@@ -1,0 +1,125 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+
+df = pd.read_csv("sales_data_sample.csv", encoding="latin1")
+
+print("First 5 rows of dataset:")
+print(df.head())
+
+print("\nDataset Shape:")
+print(df.shape)
+
+print("\nDataset Information:")
+print(df.info())
+
+print("\nMissing Values:")
+print(df.isnull().sum())
+
+features = [
+    "QUANTITYORDERED",
+    "PRICEEACH",
+    "SALES",
+    "MSRP"
+]
+
+X = df[features].copy()
+
+print("\nSelected Features:")
+print(X.head())
+
+# Remove missing values if any
+X = X.dropna()
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+print("\nScaled Data:")
+print(X_scaled[:5])
+
+wcss = []
+
+# Try clusters from 1 to 10
+for k in range(1, 11):
+    kmeans = KMeans(
+        n_clusters=k,
+        random_state=42,
+        n_init=10
+    )
+    kmeans.fit(X_scaled)
+
+    # WCSS = Within Cluster Sum of Squares
+    wcss.append(kmeans.inertia_)
+
+# Plot Elbow Curve
+plt.figure(figsize=(8, 5))
+plt.plot(
+    range(1, 11),
+    wcss,
+    marker="o"
+)
+plt.title("Elbow Method for Optimal Number of Clusters")
+plt.xlabel("Number of Clusters (K)")
+plt.ylabel("WCSS / Inertia")
+plt.grid()
+plt.show()
+
+optimal_k = 3
+
+kmeans = KMeans(
+    n_clusters=optimal_k,
+    random_state=42,
+    n_init=10
+)
+
+clusters = kmeans.fit_predict(X_scaled)
+
+# Add cluster number to dataset
+clustered_data = X.copy()
+clustered_data["Cluster"] = clusters
+
+print("\nClustered Data:")
+print(clustered_data.head(20))
+
+print("\nNumber of Records in Each Cluster:")
+print(
+    clustered_data["Cluster"]
+    .value_counts()
+    .sort_index()
+)
+
+centers = scaler.inverse_transform(
+    kmeans.cluster_centers_
+)
+
+centers_df = pd.DataFrame(
+    centers,
+    columns=features
+)
+
+print("\nCluster Centers:")
+print(centers_df)
+
+score = silhouette_score(
+    X_scaled,
+    clusters
+)
+
+print("\nSilhouette Score:", score)
+
+plt.figure(figsize=(8, 6))
+plt.scatter(
+    X["QUANTITYORDERED"],
+    X["SALES"],
+    c=clusters
+)
+plt.xlabel("Quantity Ordered")
+plt.ylabel("Sales")
+plt.title(
+    f"K-Means Clustering of Sales Data (K={optimal_k})"
+)
+plt.grid()
+plt.show()

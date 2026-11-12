@@ -1,0 +1,76 @@
+import pandas as pd
+
+from google.colab import files
+
+from sklearn.model_selection import train_test_split
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+from sklearn.neighbors import KNeighborsClassifier
+
+from sklearn.svm import SVC
+
+from sklearn.metrics import accuracy_score, classification_report
+
+uploaded = files.upload()
+
+data = pd.read_csv("emails.csv")
+
+print(data.head())
+
+print(data.columns)
+
+print(data.columns)
+
+# preparing X and y
+X = data.drop(columns=["Email No.", "Prediction"])
+
+y = data["Prediction"]
+
+print(X.shape)
+
+print(y.value_counts())
+
+# split the dataset
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+# k nearest neighbour
+knn = KNeighborsClassifier(n_neighbors=5)
+knn.fit(X_train, y_train)
+knn_pred = knn.predict(X_test)
+
+# support vector machine
+svm = SVC(kernel="linear")
+svm.fit(X_train, y_train)
+svm_pred = svm.predict(X_test)
+
+# compare both models
+print("KNN Accuracy:", accuracy_score(y_test, knn_pred))
+print("\nKNN Classification Report:")
+print(classification_report(y_test, knn_pred))
+
+print("\nSVM Accuracy:", accuracy_score(y_test, svm_pred))
+print("\nSVM Classification Report:")
+print(classification_report(y_test, svm_pred))
+
+# calculate confusion matrix
+from sklearn.metrics import confusion_matrix
+
+print("KNN Confusion Matrix:")
+print(confusion_matrix(y_test, knn_pred))
+
+print("\nSVM Confusion Matrix:")
+print(confusion_matrix(y_test, svm_pred))
+
+# Take one unseen email from the test data
+sample = X_test.iloc[[2]]
+
+# Predict using SVM
+prediction = svm.predict(sample)
+
+if prediction[0] == 1:
+    print("SPAM")
+else:
+    print("NOT SPAM")

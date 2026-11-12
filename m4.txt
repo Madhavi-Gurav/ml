@@ -1,0 +1,109 @@
+# 1. Import libraries
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, confusion_matrix
+from google.colab import files
+
+uploaded = files.upload()
+
+# 2. Read the dataset
+data = pd.read_csv("Churn_Modelling.csv")
+
+print("First 5 rows:")
+print(data.head())
+
+print("\nDataset shape:")
+print(data.shape)
+
+# 3. Remove unnecessary columns
+data = data.drop(
+    columns=["RowNumber", "CustomerId", "Surname"]
+)
+
+# 4. Convert categorical columns to numbers
+data = pd.get_dummies(
+    data,
+    columns=["Geography", "Gender"],
+    drop_first=True
+)
+
+print("\nColumns after encoding:")
+print(data.columns)
+
+# 5. Separate features and target
+X = data.drop("Exited", axis=1)
+y = data["Exited"]
+
+# 6. Split into training and testing data
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.20, random_state=42, stratify=y
+)
+
+print("\nTraining data:", X_train.shape)
+print("Testing data:", X_test.shape)
+
+# 7. Normalize the data
+scaler = StandardScaler()
+
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# 8. Build the Neural Network
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout
+
+model = Sequential()
+
+# Input + first hidden layer
+model.add(Dense(16, activation="relu", input_shape=(X_train.shape[1],)))
+
+# Second hidden layer
+model.add(Dense(8, activation="relu"))
+
+# Output layer
+model.add(Dense(1, activation="sigmoid"))
+
+# 9. Compile the model
+model.compile(
+    optimizer="adam",
+    loss="binary_crossentropy",
+    metrics=["accuracy"]
+)
+
+# 10. Train the model
+history = model.fit(
+    X_train,
+    y_train,
+    epochs=30,
+    batch_size=32,
+    validation_split=0.2,
+    verbose=1
+)
+
+# 11. Predict test data
+prediction = model.predict(X_test)
+
+# Convert probability into 0 or 1
+y_pred = (prediction >= 0.5).astype(int)
+
+# 12. Accuracy
+accuracy = accuracy_score(y_test, y_pred)
+print("\nAccuracy:", accuracy)
+
+cm = confusion_matrix(y_test, y_pred)
+print("\nConfusion Matrix:")
+print(cm)
+
+# Select one customer from test data
+sample = X_test[0].reshape(1, -1)
+
+# Predict
+probability = model.predict(sample)[0][0]
+print("Probability of leaving:", probability)
+
+if probability >= 0.5:
+    print("Prediction: Customer will LEAVE")
+else:
+    print("Prediction: Customer will STAY")
